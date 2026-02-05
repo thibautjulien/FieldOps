@@ -4,6 +4,7 @@ import { sequelize } from "./models/index.js";
 
 // Routes
 import authRouter from "./routes/auth.routes.js";
+import userRouter from "./routes/user.routes.js";
 
 const app = express();
 
@@ -11,6 +12,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/auth", authRouter);
+app.use("/user", userRouter);
 
 async function startServer() {
   try {
@@ -20,7 +22,7 @@ async function startServer() {
     await sequelize.sync({ alter: true });
     console.log("[FieldOps] Database synchronized.");
 
-    app.listen(3000, () => {
+    app.listen(process.env.PORT, () => {
       console.log("[FieldOps] Server is running on http://localhost:3000");
     });
   } catch (error) {
