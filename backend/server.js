@@ -5,6 +5,7 @@ import { sequelize } from "./models/index.js";
 // Routes
 import authRouter from "./routes/auth.routes.js";
 import userRouter from "./routes/user.routes.js";
+import interventionsRouter from "./routes/interventions.routes.js";
 
 const app = express();
 
@@ -13,13 +14,14 @@ app.use(express.json());
 
 app.use("/auth", authRouter);
 app.use("/user", userRouter);
+app.use("/interventions", interventionsRouter);
 
 async function startServer() {
   try {
     await sequelize.authenticate();
     console.log("[FieldOps] Database connected successfully.");
 
-    await sequelize.sync({ alter: true });
+    await sequelize.sync();
     console.log("[FieldOps] Database synchronized.");
 
     app.listen(process.env.PORT, () => {

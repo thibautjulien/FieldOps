@@ -19,6 +19,10 @@ const Intervention = sequelize.define("Intervention", {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  scheduled_at: {
+    type: DataTypes.DATE,
+    allowNull: false,
+  },
   latitude: { type: DataTypes.FLOAT },
   longitude: { type: DataTypes.FLOAT },
 });

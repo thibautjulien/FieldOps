@@ -12,10 +12,10 @@ export async function postAuthLoginController(req, res) {
     const user = await authService.login(email, password);
     if (!user) return res.status(401).json({ error: "Invalid credentials" });
 
-    const payload = { sub: user.id, email: user.email };
+    const payload = { sub: user.id, email: user.email, role: user.role };
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES });
 
-    return res.json({ token, expiresIn: JWT_EXPIRES, name: user.name, id: user.id });
+    return res.json({ token, expiresIn: JWT_EXPIRES, id: user.id, name: user.name, email: user.email, role: user.role });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Internal error" });

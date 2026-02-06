@@ -25,6 +25,7 @@ export async function putUserMeController(req, res) {
     const user = await User.findByPk(userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
+    if (!email) return res.status(400).json({ error: "Missing email" });
     if (email) user.email = email;
     await user.save();
 

@@ -7,10 +7,10 @@ const authService = {
       where: { email },
     });
 
-    if (!user) return (console.log("User not found"), null);
+    if (!user) return (console.log("[FieldOps] User not found"), null);
 
     const isValid = await bcrypt.compare(password, user.password);
-    if (!isValid) return (console.log("Invalid password"), null);
+    if (!isValid) return (console.log("[FieldOps] Invalid password"), null);
 
     return {
       id: user.id,
