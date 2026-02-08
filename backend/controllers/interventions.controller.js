@@ -16,4 +16,4 @@ export async function listInterventionsController(req, res) {
   }
 }
 
-export async function getInterventionByIdController(req, res) {}
+export async function interventionByIdController(req, res) {}
