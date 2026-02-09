@@ -23,6 +23,11 @@ const Intervention = sequelize.define("Intervention", {
     type: DataTypes.DATE,
     allowNull: false,
   },
+  is_closed: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  },
   latitude: { type: DataTypes.FLOAT },
   longitude: { type: DataTypes.FLOAT },
 });

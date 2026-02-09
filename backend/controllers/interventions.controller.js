@@ -2,6 +2,7 @@ import {
   getInterventionById,
   listInterventions,
   createIntervention,
+  updateIntervention,
 } from "../services/interventions.service.js";
 
 export async function listInterventionsController(req, res) {
@@ -62,6 +63,29 @@ export async function createInterventionController(req, res) {
 
     if (err.message.startsWith("BAD_REQUEST")) {
       res.status(400).json({ error: err.message });
+    }
+
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+export async function updateInterventionController(req, res) {
+  try {
+    const user = req.user;
+    const data = req.body;
+    const id = req.params.id;
+
+    const updatedIntervention = await updateIntervention(id, data, user);
+    return res.status(200).json(updatedIntervention);
+  } catch (err) {
+    console.error(err);
+
+    if (err.message.startsWith("FORBIDDEN")) {
+      return res.status(403).json({ error: err.message });
+    }
+
+    if (err.message.startsWith("NOT_FOUND")) {
+      return res.status(404).json({ error: err.message });
     }
 
     return res.status(500).json({ error: err.message });

@@ -3,6 +3,7 @@ import {
   listInterventionsController,
   interventionByIdController,
   createInterventionController,
+  updateInterventionController,
 } from "../controllers/interventions.controller.js";
 import { requireAuth } from "../middlewares/auth.middleware.js";
 import { requireRole } from "../middlewares/role.middleware.js";
@@ -17,5 +18,6 @@ interventionsRouter.post(
   requireRole("admin"),
   createInterventionController,
 );
+interventionsRouter.put("/:id", requireAuth, updateInterventionController);
 
 export default interventionsRouter;
