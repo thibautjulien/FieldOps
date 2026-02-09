@@ -91,3 +91,16 @@ export async function updateInterventionController(req, res) {
     return res.status(500).json({ error: err.message });
   }
 }
+
+export async function closeInterventionController(req, res) {
+  try {
+  } catch (err) {
+    console.error(err);
+
+    if (err.message.startsWith("FORBIDDEN")) {
+      return res.status(403).json({ error: err.message });
+    }
+
+    return res.status(500).json({ error: err.message });
+  }
+}

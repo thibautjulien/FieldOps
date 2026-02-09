@@ -98,7 +98,8 @@ export async function updateIntervention(id, data, user) {
   const validTransitions = {
     planifié: ["en cours"],
     "en cours": ["terminé"],
-    terminé: [],
+    terminé: ["clos"],
+    clos: [],
   };
 
   const intervention = await Intervention.findByPk(id, {
@@ -112,8 +113,13 @@ export async function updateIntervention(id, data, user) {
       "assigned_user_id",
     ],
   });
+
   if (!intervention) {
     throw new Error("NOT_FOUND: Intervention not found");
+  }
+
+  if (intervention.is_closed) {
+    throw new Error("FORBIDDEN: Intervention is closed and cannot be modified");
   }
 
   if (user.role === "agent" && intervention.assigned_user_id !== user.id) {
@@ -155,4 +161,37 @@ export async function updateIntervention(id, data, user) {
 
   await intervention.save();
   return intervention;
+}
+
+async function closeIntervention(id, user) {
+  const intervention = await Intervention.findByPk(id, {
+    attributes: ["id", "status", "assigned_user_id", "is_closed"],
+  });
+
+  if (!intervention) {
+    throw new Error("NOT_FOUND: Intervention not found");
+  }
+
+  if (intervention.is_closed) {
+    throw new Error("FORBIDDEN: Intervention is already closed");
+  }
+
+  if (user.role === "admin") {
+    if (intervention.status !== "terminé" && !options.confirmed) {
+      throw new Error(
+        "BAD_REQUEST: Admin must confirm closing a non-finished intervention");
+    }
+  } else if (
+    user.role === "agent" &&
+    intervention.assigned_user_id === user.id
+  ) {
+    if (intervention.assigned_user_id !== user.id)
+      throw new Error("FORBIDDEN: You are not assigned to this intervention");
+    if (intervention.status !== "terminé")
+      throw new Error(
+        "FORBIDDEN: Only interventions with status 'terminé' can be closed",
+      );
+  } else {
+    throw new Error("FORBIDDEN: You cannot close this intervention");
+  }
 }
