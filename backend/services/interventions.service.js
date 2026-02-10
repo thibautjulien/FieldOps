@@ -238,3 +238,74 @@ export async function addInterventionPhotos(id, { type, filePath }, user) {
   });
   return photo;
 }
+
+export async function getInterventionPhotos(id, user) {
+  if (!user) throw new Error("UNAUTHORIZED: Missing or invalid token");
+
+  const intervention = await Intervention.findByPk(id, {
+    attributes: ["id", "assigned_user_id"],
+  });
+  if (!intervention) throw new Error("NOT_FOUND: Intervention not found");
+  if (user.role === "agent" && intervention.assigned_user_id !== user.id) {
+    throw new Error("FORBIDDEN: You are not assigned to this intervention");
+  }
+
+  const photos = await InterventionPhoto.findAll({
+    where: { intervention_id: id },
+    attributes: ["id", "type", "file_path"],
+  });
+
+  const grouped = {
+    avant: photos.filter((p) => p.type === "AVANT"),
+    après: photos.filter((p) => p.type === "APRES"),
+  };
+
+  return grouped;
+}
+
+export async function addInterventionLog(id, { action }, user) {
+  if (!user) throw new Error("UNAUTHORIZED: Missing or invalid token");
+  if (!action) throw new Error("BAD_REQUEST: Missing action");
+
+  const intervention = await Intervention.findByPk(id, {
+    attributes: ["id", "assigned_user_id"],
+  });
+  if (!intervention) throw new Error("NOT_FOUND: Intervention not found");
+
+  if (user.role === "agent" && intervention.assigned_user_id !== user.id) {
+    throw new Error("FORBIDDEN: You are not assigned to this intervention");
+  }
+
+  const log = await InterventionLog.create({
+    intervention_id: id,
+    user_id: user.id,
+    action,
+  });
+
+  return log;
+}
+
+export async function getInterventionLog(id, user) {
+  if (!user) throw new Error("UNAUTHORIZED: Missing or invalid token");
+
+  const intervention = await Intervention.findByPk(id, {
+    attributes: ["id", "assigned_user_id"],
+  });
+  if (!intervention) throw new Error("NOT_FOUND: Intervention not found");
+
+  if (user.role === "agent" && intervention.assigned_user_id !== user.id) {
+    throw new Error("FORBIDDEN: You are not assigned to this intervention");
+  }
+
+  const logs = await InterventionLog.findAll({
+    where: { intervention_id: id },
+    include: [
+      {
+        model: User,
+        attributes: ["id", "name", "email"],
+      },
+    ],
+  });
+
+  return logs;
+}
