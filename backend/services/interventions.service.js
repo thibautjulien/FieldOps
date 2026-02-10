@@ -1,5 +1,7 @@
 import Intervention from "../models/Intervention.model.js";
 import User from "../models/User.model.js";
+import InterventionPhoto from "../models/InterventionPhoto.model.js";
+import InterventionLog from "../models/InterventionLog.model.js";
 
 export async function listInterventions(user) {
   if (!user) {
@@ -95,11 +97,18 @@ export async function createIntervention(data, user) {
 }
 
 export async function updateIntervention(id, data, user) {
+  const statusTransition = {
+    PLANIFIE: "planifié",
+    EN_COURS: "en cours",
+    TERMINE: "terminé",
+    CLOS: "clos",
+  };
+
   const validTransitions = {
-    planifié: ["en cours"],
-    "en cours": ["terminé"],
-    terminé: ["clos"],
-    clos: [],
+    [statusTransition.PLANIFIE]: [statusTransition.EN_COURS],
+    [statusTransition.EN_COURS]: [statusTransition.TERMINE],
+    [statusTransition.TERMINE]: [statusTransition.CLOS],
+    [statusTransition.CLOS]: [],
   };
 
   const intervention = await Intervention.findByPk(id, {
@@ -118,80 +127,114 @@ export async function updateIntervention(id, data, user) {
     throw new Error("NOT_FOUND: Intervention not found");
   }
 
-  if (intervention.is_closed) {
-    throw new Error("FORBIDDEN: Intervention is closed and cannot be modified");
+  const currentStatus = intervention.status;
+
+  if (currentStatus === statusTransition.CLOS) {
+    throw new Error("FORBIDDEN: Intervention is closed and cannot be updated");
   }
 
   if (user.role === "agent" && intervention.assigned_user_id !== user.id) {
     throw new Error("FORBIDDEN: You are not assigned to this intervention");
   }
 
-  if (user.role === "agent") {
-    if (data.title !== undefined) {
-      throw new Error("FORBIDDEN: Agents can only modify status");
-    }
-    if (data.description !== undefined) {
-      throw new Error("FORBIDDEN: Agents can only modify status");
-    }
-    if (data.scheduled_at !== undefined) {
-      throw new Error("FORBIDDEN: Agents can only modify status");
-    }
-    if (data.latitude !== undefined) {
-      throw new Error("FORBIDDEN: Agents can only modify status");
-    }
-    if (data.longitude !== undefined) {
-      throw new Error("FORBIDDEN: Agents can only modify status");
-    }
+  if (data.status !== undefined) {
+    const nextStatus = data.status;
 
-    if (!validTransitions[intervention.status].includes(data.status)) {
+    if (
+      !validTransitions[currentStatus] ||
+      !validTransitions[currentStatus].includes(nextStatus)
+    ) {
       throw new Error("FORBIDDEN: Invalid status transition");
     }
-    intervention.status = data.status;
+
+    intervention.status = nextStatus;
+  }
+
+  if (user.role === "agent") {
+    if (
+      data.title !== undefined ||
+      data.description !== undefined ||
+      data.scheduled_at !== undefined ||
+      data.latitude !== undefined ||
+      data.longitude !== undefined
+    ) {
+      throw new Error("FORBIDDEN: Agents can only modify status");
+    }
   }
 
   if (user.role === "admin") {
-    if (data.title !== undefined) intervention.title = data.title;
-    if (data.description !== undefined)
+    if (data.title != undefined) intervention.title = data.title;
+    if (data.description != undefined)
       intervention.description = data.description;
-    if (data.scheduled_at !== undefined)
+    if (data.scheduled_at != undefined)
       intervention.scheduled_at = data.scheduled_at;
-    if (data.latitude !== undefined) intervention.latitude = data.latitude;
-    if (data.longitude !== undefined) intervention.longitude = data.longitude;
+    if (data.latitude != undefined) intervention.latitude = data.latitude;
+    if (data.longitude != undefined) intervention.longitude = data.longitude;
   }
 
   await intervention.save();
   return intervention;
 }
 
-async function closeIntervention(id, user) {
+export async function closeIntervention(id, user, options = {}) {
+  const confirmed = options.confirmed === true;
+
   const intervention = await Intervention.findByPk(id, {
     attributes: ["id", "status", "assigned_user_id", "is_closed"],
   });
 
-  if (!intervention) {
-    throw new Error("NOT_FOUND: Intervention not found");
-  }
+  if (!intervention) throw new Error("NOT_FOUND: Intervention not found");
 
-  if (intervention.is_closed) {
+  if (intervention.is_closed)
     throw new Error("FORBIDDEN: Intervention is already closed");
-  }
 
-  if (user.role === "admin") {
-    if (intervention.status !== "terminé" && !options.confirmed) {
-      throw new Error(
-        "BAD_REQUEST: Admin must confirm closing a non-finished intervention");
-    }
-  } else if (
-    user.role === "agent" &&
-    intervention.assigned_user_id === user.id
-  ) {
+  if (user.role === "agent") {
     if (intervention.assigned_user_id !== user.id)
       throw new Error("FORBIDDEN: You are not assigned to this intervention");
     if (intervention.status !== "terminé")
+      throw new Error("FORBIDDEN: Only finished intervention can be closed");
+  } else if (user.role === "admin") {
+    if (intervention.status !== "terminé" && !confirmed) {
       throw new Error(
-        "FORBIDDEN: Only interventions with status 'terminé' can be closed",
+        "FORBIDDEN: Admin must confirm closing a non-finished intervention",
       );
+    }
   } else {
     throw new Error("FORBIDDEN: You cannot close this intervention");
   }
+
+  intervention.is_closed = true;
+  intervention.status = "clos";
+  await intervention.save();
+  return intervention;
+}
+
+export async function addInterventionPhotos(id, { type, filePath }, user) {
+  if (!user) throw new Error("UNAUTHORIZED: Missing or invalid token");
+  if (user.role !== "agent")
+    throw new Error("FORBIDDEN: Only agents can add photos");
+
+  const intervention = await Intervention.findByPk(id, {
+    attributes: ["id", "assigned_user_id", "is_closed"],
+  });
+
+  if (!intervention) throw new Error("NOT_FOUND: Intervention not found");
+  if (intervention.is_closed)
+    throw new Error("FORBIDDEN: Intervention is closed");
+  if (intervention.assigned_user_id !== user.id) {
+    throw new Error("FORBIDDEN: You are not assigned to this intervention");
+  }
+
+  const normalizedType = type?.toUpperCase();
+  if (!["AVANT", "APRES"].includes(normalizedType)) {
+    throw new Error("BAD_REQUEST: Invalid photo type");
+  }
+  if (!filePath) throw new Error("BAD_REQUEST: Missing file path");
+
+  const photo = await InterventionPhoto.create({
+    intervention_id: id,
+    type: normalizedType,
+    file_path: filePath,
+  });
+  return photo;
 }

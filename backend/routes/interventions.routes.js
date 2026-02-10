@@ -4,9 +4,12 @@ import {
   interventionByIdController,
   createInterventionController,
   updateInterventionController,
+  closeInterventionController,
+  addInterventionPhotosController,
 } from "../controllers/interventions.controller.js";
 import { requireAuth } from "../middlewares/auth.middleware.js";
 import { requireRole } from "../middlewares/role.middleware.js";
+import upload from "../middlewares/upload.middleware.js";
 
 const interventionsRouter = Router();
 
@@ -19,5 +22,12 @@ interventionsRouter.post(
   createInterventionController,
 );
 interventionsRouter.put("/:id", requireAuth, updateInterventionController);
+interventionsRouter.put("/:id/close", requireAuth, closeInterventionController);
+interventionsRouter.post(
+  "/:id/photos",
+  requireAuth,
+  upload.single("photo"),
+  addInterventionPhotosController,
+);
 
 export default interventionsRouter;

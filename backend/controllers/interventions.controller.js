@@ -3,6 +3,8 @@ import {
   listInterventions,
   createIntervention,
   updateIntervention,
+  closeIntervention,
+  addInterventionPhotos,
 } from "../services/interventions.service.js";
 
 export async function listInterventionsController(req, res) {
@@ -94,11 +96,53 @@ export async function updateInterventionController(req, res) {
 
 export async function closeInterventionController(req, res) {
   try {
+    const id = req.params.id;
+    const user = req.user;
+    const confirmed = req.body.confirmed;
+
+    const closedIntervention = await closeIntervention(id, user, { confirmed });
+    return res.status(200).json(closedIntervention);
   } catch (err) {
     console.error(err);
 
+    if (err.message.startsWith("NOT_FOUND")) {
+      return res.status(404).json({ error: err.message });
+    }
+
     if (err.message.startsWith("FORBIDDEN")) {
       return res.status(403).json({ error: err.message });
+    }
+
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+export async function addInterventionPhotosController(req, res) {
+  try {
+    const user = req.user;
+    const id = req.params.id;
+    const { type } = req.body;
+    const filePath = req.file?.path;
+
+    const photo = await addInterventionPhotos(id, { type, filePath }, user);
+    return res.status(201).json(photo);
+  } catch (err) {
+    console.error(err);
+
+    if (err.message.startsWith("UNAUTHORIZED")) {
+      return res.status(401).json({ error: err.message });
+    }
+
+    if (err.message.startsWith("FORBIDDEN")) {
+      return res.status(403).json({ error: err.message });
+    }
+
+    if (err.message.startsWith("BAD_REQUEST")) {
+      return res.status(400).json({ error: err.message });
+    }
+
+    if (err.message.startsWith("NOT_FOUND")) {
+      return res.status(404).json({ error: err.message });
     }
 
     return res.status(500).json({ error: err.message });
