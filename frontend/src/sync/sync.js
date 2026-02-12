@@ -1,4 +1,4 @@
-import { db } from "../db/db";
+import { queryAll } from "../db/db";
 import { SYNC_STATUS } from "../types/models";
 import {
   apiCreateIntervention,
@@ -11,27 +11,8 @@ import {
   markLogSynced,
 } from "./queue";
 
-function selectAll(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.transaction((tx) => {
-      tx.executeSql(
-        sql,
-        params,
-        (_tx, result) => {
-          const rows = result.rows._array || [];
-          resolve(rows);
-        },
-        (_tx, error) => {
-          reject(error);
-          return false;
-        },
-      );
-    });
-  });
-}
-
 export async function runSync() {
-  const interventions = await selectAll(
+  const interventions = await queryAll(
     "SELECT * FROM interventions_local WHERE sync_status = ?",
     [SYNC_STATUS.PENDING],
   );
@@ -50,13 +31,13 @@ export async function runSync() {
     await markInterventionSynced(it.id_local, created.id);
   }
 
-  const photos = await selectAll(
+  const photos = await queryAll(
     "SELECT * FROM photos_local where sync_status = ?",
     [SYNC_STATUS.PENDING],
   );
 
   for (const p of photos) {
-    const rows = await selectAll(
+    const rows = await queryAll(
       "SELECT id_server FROM interventions_local WHERE id_local = ?",
       [p.intervention_id_local],
     );
@@ -72,13 +53,13 @@ export async function runSync() {
     await markPhotoSynced(p.id_local);
   }
 
-  const logs = await selectAll(
+  const logs = await queryAll(
     "SELECT * FROM logs_local WHERE sync_status = ?",
     [SYNC_STATUS.PENDING],
   );
 
   for (const l of logs) {
-    const rows = await selectAll(
+    const rows = await queryAll(
       "SELECT id_server FROM interventions_local WHERE id_local = ?",
       [l.intervention_id_local],
     );

@@ -1,12 +1,24 @@
-import { Text, View } from "react-native";
+import { View, Text, TouchableOpacity, Image } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 
-export default function Index() {
+export default function HomeScreen() {
+  const router = useRouter();
+
   return (
-    <View className="flex-1 items-center justify-center bg-white">
-      <Text className="text-3xl font-bold text-black">NativeWind OK</Text>
-      <Text className="mt-2 text-xl text-neutral-600">
-        Edit app/index.tsx to change this screen.
-      </Text>
-    </View>
+    <SafeAreaView edges={["top"]} style={{ flex: 1 }}>
+      <View className="flex-1 justify-center items-center">
+        <Image
+          className="w-96 h-46"
+          resizeMethod="contain"
+          source={require("../assets/images/FieldOps.png")}
+        />
+        <TouchableOpacity className="" onPress={() => router.replace("/login")}>
+          <Text className="text-2xl text-[#708090] font-bold mt-5">
+            CONNEXION
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 }

@@ -10,6 +10,6 @@ export async function getToken() {
   return AsyncStorage.getItem(TOKEN_KEY);
 }
 
-export async function romveToken() {
+export async function removeToken() {
   await AsyncStorage.removeItem(TOKEN_KEY);
 }

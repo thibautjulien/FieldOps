@@ -12,7 +12,7 @@ export async function apiAddInterventionPhoto(id, { type, fileUri }) {
   form.append("photo", {
     uri: fileUri,
     name: "photo.jpg",
-    type: "image/jpg",
+    type: "image/jpeg",
   });
 
   const res = await api.post(`/interventions/${id}/photos`, form, {

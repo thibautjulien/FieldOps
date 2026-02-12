@@ -19,7 +19,7 @@ export async function addLocalIntervention(data) {
 
   await execSql(
     `
-    INSERT INTO intervention_local
+    INSERT INTO interventions_local
     (id_local, title, description, status, scheduled_at, assigned_user_id, latitude, longitude, sync_status, updated_at_local)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
