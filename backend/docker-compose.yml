@@ -1,17 +1,17 @@
 services:
   db:
-    image: postgres:16-alpine
-    container_name: fieldops-db
+    image: ${POSTGRES_IMAGE}
+    container_name: ${DB_CONTAINER_NAME}
     environment:
-      POSTGRES_DB: fieldops
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "5433:5432"
+      - "${DB_PUBLIC_PORT}:${DB_PORT}"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d fieldops"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -20,17 +20,17 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: fieldops-api
+    container_name: ${API_CONTAINER_NAME}
     ports:
-      - "3000:3000"
+      - "${PORT}:3000"
     env_file:
       - .env
     environment:
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_NAME: fieldops
-      DB_USER: postgres
-      DB_PASSWORD: postgres
+      DB_HOST: ${DB_DOCKER_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
     depends_on:
       db:
         condition: service_healthy
