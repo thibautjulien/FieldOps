@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { login } from "../src/services/AuthService";
 
@@ -37,11 +36,13 @@ export default function LoginScreen() {
 
     console.log("[FieldOps] Login réussi : ", result.data);
 
-    const { token, name, id } = result.data;
+    const { token } = result.data;
 
-    await AsyncStorage.setItem("token", token);
-    await AsyncStorage.setItem("name", name);
-    await AsyncStorage.setItem("id", String(id));
+    if (!token) {
+      setError("Token manquant");
+      setLoading(false);
+      return;
+    }
 
     setLoading(false);
     router.replace("/accueil");

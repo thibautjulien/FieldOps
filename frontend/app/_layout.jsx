@@ -10,9 +10,21 @@ import {
 
 export default function RootLayout() {
   useEffect(() => {
-    initSchema().catch(console.error);
-    startNetworkListener();
+    let mounted = true;
+
+    const boot = async () => {
+      try {
+        await initSchema();
+        if (mounted) startNetworkListener();
+      } catch (err) {
+        console.error("[FieldOps] initSchema failed:", err);
+      }
+    };
+
+    boot();
+
     return () => {
+      mounted = false;
       stopNetworkListener();
     };
   }, []);

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getMe } from "../src/services/AuthService";
 
 export default function Accueil() {
   const [loading, setLoading] = useState(true);
@@ -14,8 +14,8 @@ export default function Accueil() {
     const loadName = async () => {
       try {
         setLoading(true);
-        const storedName = await AsyncStorage.getItem("name");
-        if (storedName) setName(storedName);
+        const result = await getMe();
+        if (result.success) setName(result.data?.name || "");
       } catch (err) {
         console.error("[FieldOps] Error retrieving name : ", err);
       } finally {

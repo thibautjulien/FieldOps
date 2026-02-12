@@ -25,10 +25,22 @@ export async function initSchema() {
             updated_at_local TEXT NOT NULL);`);
 
   await execSql(`
-                CREATE TABLE IF NOT EXISTS logs_local (
-                id_local TEXT PRIMARY KEY,
-                intervention_id_local TEXT NOT NULL,
-                action TEXT NOT NULL,
-                sync_status TEXT NOT NULL,
-                updated_at_local TEXT NOT NULL);`);
+            CREATE TABLE IF NOT EXISTS logs_local (
+            id_local TEXT PRIMARY KEY,
+            intervention_id_local TEXT NOT NULL,
+            action TEXT NOT NULL,
+            sync_status TEXT NOT NULL,
+            updated_at_local TEXT NOT NULL);`);
+
+  await execSql(`
+  CREATE TABLE IF NOT EXISTS sync_queue (
+    id_local TEXT PRIMARY KEY,
+    entity_type TEXT NOT NULL,
+    entity_id_local TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    sync_status TEXT NOT NULL,
+    created_at_local TEXT NOT NULL,
+    updated_at_local TEXT NOT NULL
+  );
+`);
 }
