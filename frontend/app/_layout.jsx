@@ -1,6 +1,5 @@
 import "../global.css";
 import { Stack } from "expo-router";
-
 import { useEffect } from "react";
 import { initSchema } from "../src/db/schema";
 import {
@@ -30,14 +29,10 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Stack.Screen name="index" options={{ title: "Index" }} />
-      <Stack.Screen name="login" options={{ title: "Connexion" }} />
-      <Stack.Screen name="accueil" options={{ title: "accueil" }} />
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="login" />
+      <Stack.Screen name="(connected)" />
     </Stack>
   );
 }

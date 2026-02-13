@@ -16,7 +16,7 @@ export const login = async ({ email, password }) => {
     if (axios.isAxiosError(err) && err.response?.status === 400) {
       return { success: false, message: "Email ou mot de passe manquant" };
     }
-    return { success: false, message: "Erreur serveur, reessayez plus tard" };
+    return { success: false, message: "Erreur serveur, réessayez plus tard" };
   }
 };
 

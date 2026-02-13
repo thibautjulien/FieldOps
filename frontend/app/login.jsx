@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { login } from "../src/services/AuthService";
@@ -49,24 +49,37 @@ export default function LoginScreen() {
   }
 
   return (
-    <SafeAreaView edges={["top"]} className="flex-1">
-      <View className="h-12 mt-6 px-4">
-        {error ? (
-          <View className="rounded-xl bg-red-500 px-3 py-2">
-            <Text className="text-white text-center">{error}</Text>
-          </View>
-        ) : null}
-      </View>
+    <SafeAreaView className="flex-1 bg-[#F4F7FA]">
+      <View className="flex-1 px-6">
+        <View className="items-center pt-10">
+          <Image
+            source={require("../assets/images/FieldOps.png")}
+            className="h-20 w-52"
+            resizeMode="contain"
+          />
+          <Text className="mt-3 text-sm uppercase text-[#708090]">
+            Portail interventions entreprise
+          </Text>
+        </View>
 
-      <View className="flex-1 items-center justify-center px-4">
-        <View className="w-full mt-24 gap-4">
+        <View className="mt-10 rounded-2xl border border-[#D3DCE6] bg-white p-5">
+          <Text className="mb-4 text-xl font-bold text-[#334155]">
+            Connexion
+          </Text>
+
+          {error ? (
+            <View className="mb-4 rounded-lg bg-red-50 p-3">
+              <Text className="text-red-700">{error}</Text>
+            </View>
+          ) : null}
+
           <TextInput
-            placeholder="Email"
+            placeholder="Email professionnel"
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
             keyboardType="email-address"
-            className="border border-gray-500 rounded-sm px-3 py-2 text-gray-500 bg-transparent"
+            className="mb-3 rounded-lg border border-[#CBD5E1] px-3 py-3 text-[#334155]"
           />
 
           <TextInput
@@ -74,16 +87,15 @@ export default function LoginScreen() {
             value={password}
             onChangeText={setPassword}
             secureTextEntry
-            className="border border-gray-500 rounded-sm px-3 py-2 text-gray-500 bg-transparent"
+            className="rounded-lg border border-[#CBD5E1] px-3 py-3 text-[#334155]"
           />
 
           <TouchableOpacity
             onPress={handleSubmit}
             disabled={loading}
-            className="mt-4 h-14 w-56 self-center items-center justify-center rounded-md bg-blue-600"
-            activeOpacity={0.8}
+            className="mt-5 items-center rounded-lg bg-[#334155] py-3"
           >
-            <Text className="text-white text-base font-semibold">
+            <Text className="font-semibold text-white">
               {loading ? "Connexion..." : "Se connecter"}
             </Text>
           </TouchableOpacity>
