@@ -18,7 +18,7 @@ function parsePayload(payloadJson) {
 
 async function getServerInterventionId(interventionIdLocal) {
   const rows = await queryAll(
-    "SELECT id_server FROM intervention_local WHERE id_local = ?",
+    "SELECT id_server FROM interventions_local WHERE id_local = ?",
     [interventionIdLocal],
   );
   return rows[0]?.id_server || null;
@@ -48,6 +48,7 @@ export async function runSync() {
           assigned_user_id: payload.assigned_user_id,
           latitude: payload.latitude,
           longitude: payload.longitude,
+          city_label: payload.city_label,
         });
 
         await markInterventionSynced(payload.id_local, created.data.id);
@@ -87,7 +88,7 @@ export async function runSync() {
         });
 
         await api.post(`/interventions/${idServer}/photos`, form, {
-          headers: { "Content-Type": "multipart/form-date" },
+          headers: { "Content-Type": "multipart/form-data" },
         });
 
         await markPhotoSynced(item.entity_id_local);

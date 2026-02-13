@@ -5,6 +5,21 @@ export async function apiCreateIntervention(data) {
   return res.data;
 }
 
+export async function apiGetInterventionById(id) {
+  const res = await api.get(`/interventions/${id}`);
+  return res.data;
+}
+
+export async function apiUpdateInterventionStatus(id, status) {
+  const res = await api.put(`/interventions/${id}`, { status });
+  return res.data;
+}
+
+export async function apiCloseIntervention(id, confirmed = false) {
+  const res = await api.put(`/interventions/${id}/close`, { confirmed });
+  return res.data;
+}
+
 export async function apiAddInterventionPhoto(id, { type, fileUri }) {
   const form = new FormData();
 

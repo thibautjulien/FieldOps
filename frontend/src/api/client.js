@@ -2,8 +2,11 @@ import axios from "axios";
 import { Platform } from "react-native";
 import { getToken } from "../utils/authStorage";
 
+const LAN_URL = "http://192.168.1.51:3000";
+
 const BASE_URL =
-  Platform.OS === "android" ? "http://10.0.2.2:3000" : "http://localhost:3000";
+  process.env.EXPO_PUBLIC_API_URL ||
+  (Platform.OS === "android" ? "http://10.0.2.2:3000" : LAN_URL);
 
 export const api = axios.create({
   baseURL: BASE_URL,

@@ -3,6 +3,29 @@ import User from "../models/User.model.js";
 import InterventionPhoto from "../models/InterventionPhoto.model.js";
 import InterventionLog from "../models/InterventionLog.model.js";
 
+function normalizeRole(role = "") {
+  return String(role).trim().toLowerCase();
+}
+
+function normalizeStatus(status = "") {
+  const raw = String(status).trim().toUpperCase();
+
+  const map = {
+    PLANIFIE: "PLANIFIE",
+    "PLANIFIÉ": "PLANIFIE",
+    EN_COURS: "EN_COURS",
+    "EN COURS": "EN_COURS",
+    TERMINE: "TERMINE",
+    "TERMINÉ": "TERMINE",
+    CLOS: "CLOS",
+    CLOTURE: "CLOS",
+    "CLÔTURÉ": "CLOS",
+  };
+
+  return map[raw] || raw;
+}
+
+
 export async function listInterventions(user) {
   if (!user) {
     throw new Error("UNAUTHORIZED: Missing or invalid token");
@@ -10,14 +33,14 @@ export async function listInterventions(user) {
 
   let whereClause = {};
 
-  if (user.role === "agent") {
+  if (normalizeRole(user.role) === "agent") {
     whereClause.assigned_user_id = user.id;
   } else {
     whereClause = {};
   }
 
   const listInterventions = await Intervention.findAll({
-    attributes: ["id", "title", "status", "scheduled_at"],
+    attributes: ["id", "title", "status", "scheduled_at", "city_label", "assigned_user_id"],
     where: whereClause,
   });
 
@@ -31,11 +54,15 @@ export async function getInterventionById(id, user) {
 
   const intervention = await Intervention.findByPk(id, {
     attributes: [
+      "id",
       "title",
       "description",
       "status",
+      "scheduled_at",
+      "is_closed",
       "latitude",
       "longitude",
+      "city_label",
       "assigned_user_id",
     ],
   });
@@ -44,7 +71,7 @@ export async function getInterventionById(id, user) {
     throw new Error("NOT_FOUND: Intervention not found");
   }
 
-  if (user.role === "agent" && intervention.assigned_user_id !== user.id) {
+  if (normalizeRole(user.role) === "agent" && intervention.assigned_user_id !== user.id) {
     throw new Error("FORBIDDEN: You are not assigned to this intervention");
   }
 
@@ -52,16 +79,17 @@ export async function getInterventionById(id, user) {
 }
 
 export async function createIntervention(data, user) {
-  if (user.role !== "admin") {
+  if (normalizeRole(user.role) !== "admin") {
     throw new Error("FORBIDDEN: Only admins can create interventions");
   }
 
   const {
     title,
     description,
-    status = data.status || "planifié",
+    status = normalizeStatus(data.status || "PLANIFIE"),
     latitude,
     longitude,
+    city_label,
     assigned_user_id,
     scheduled_at,
   } = data;
@@ -78,6 +106,11 @@ export async function createIntervention(data, user) {
     throw new Error("BAD_REQUEST: Missing required fields");
   }
 
+  const allowedStatuses = new Set(["PLANIFIE", "EN_COURS", "TERMINE", "CLOS"]);
+  if (!allowedStatuses.has(status)) {
+    throw new Error("BAD_REQUEST: Invalid status value");
+  }
+
   const existUser = await User.findByPk(assigned_user_id);
   if (!existUser) {
     throw new Error("BAD_REQUEST: Assigned user does not exist");
@@ -89,6 +122,7 @@ export async function createIntervention(data, user) {
     status,
     latitude,
     longitude,
+    city_label,
     assigned_user_id,
     scheduled_at,
   });
@@ -98,10 +132,10 @@ export async function createIntervention(data, user) {
 
 export async function updateIntervention(id, data, user) {
   const statusTransition = {
-    PLANIFIE: "planifié",
-    EN_COURS: "en cours",
-    TERMINE: "terminé",
-    CLOS: "clos",
+    PLANIFIE: "PLANIFIE",
+    EN_COURS: "EN_COURS",
+    TERMINE: "TERMINE",
+    CLOS: "CLOS",
   };
 
   const validTransitions = {
@@ -119,6 +153,7 @@ export async function updateIntervention(id, data, user) {
       "status",
       "latitude",
       "longitude",
+      "city_label",
       "assigned_user_id",
     ],
   });
@@ -127,18 +162,18 @@ export async function updateIntervention(id, data, user) {
     throw new Error("NOT_FOUND: Intervention not found");
   }
 
-  const currentStatus = intervention.status;
+  const currentStatus = normalizeStatus(intervention.status);
 
   if (currentStatus === statusTransition.CLOS) {
     throw new Error("FORBIDDEN: Intervention is closed and cannot be updated");
   }
 
-  if (user.role === "agent" && intervention.assigned_user_id !== user.id) {
+  if (normalizeRole(user.role) === "agent" && intervention.assigned_user_id !== user.id) {
     throw new Error("FORBIDDEN: You are not assigned to this intervention");
   }
 
   if (data.status !== undefined) {
-    const nextStatus = data.status;
+    const nextStatus = normalizeStatus(data.status);
 
     if (
       !validTransitions[currentStatus] ||
@@ -150,19 +185,20 @@ export async function updateIntervention(id, data, user) {
     intervention.status = nextStatus;
   }
 
-  if (user.role === "agent") {
+  if (normalizeRole(user.role) === "agent") {
     if (
       data.title !== undefined ||
       data.description !== undefined ||
       data.scheduled_at !== undefined ||
       data.latitude !== undefined ||
-      data.longitude !== undefined
+      data.longitude !== undefined ||
+      data.city_label !== undefined
     ) {
       throw new Error("FORBIDDEN: Agents can only modify status");
     }
   }
 
-  if (user.role === "admin") {
+  if (normalizeRole(user.role) === "admin") {
     if (data.title != undefined) intervention.title = data.title;
     if (data.description != undefined)
       intervention.description = data.description;
@@ -170,6 +206,7 @@ export async function updateIntervention(id, data, user) {
       intervention.scheduled_at = data.scheduled_at;
     if (data.latitude != undefined) intervention.latitude = data.latitude;
     if (data.longitude != undefined) intervention.longitude = data.longitude;
+    if (data.city_label != undefined) intervention.city_label = data.city_label;
   }
 
   await intervention.save();
@@ -188,13 +225,13 @@ export async function closeIntervention(id, user, options = {}) {
   if (intervention.is_closed)
     throw new Error("FORBIDDEN: Intervention is already closed");
 
-  if (user.role === "agent") {
+  if (normalizeRole(user.role) === "agent") {
     if (intervention.assigned_user_id !== user.id)
       throw new Error("FORBIDDEN: You are not assigned to this intervention");
-    if (intervention.status !== "terminé")
+    if (normalizeStatus(intervention.status) !== "TERMINE")
       throw new Error("FORBIDDEN: Only finished intervention can be closed");
-  } else if (user.role === "admin") {
-    if (intervention.status !== "terminé" && !confirmed) {
+  } else if (normalizeRole(user.role) === "admin") {
+    if (normalizeStatus(intervention.status) !== "TERMINE" && !confirmed) {
       throw new Error(
         "FORBIDDEN: Admin must confirm closing a non-finished intervention",
       );
@@ -204,14 +241,14 @@ export async function closeIntervention(id, user, options = {}) {
   }
 
   intervention.is_closed = true;
-  intervention.status = "clos";
+  intervention.status = "CLOS";
   await intervention.save();
   return intervention;
 }
 
 export async function addInterventionPhotos(id, { type, filePath }, user) {
   if (!user) throw new Error("UNAUTHORIZED: Missing or invalid token");
-  if (user.role !== "agent")
+  if (normalizeRole(user.role) !== "agent")
     throw new Error("FORBIDDEN: Only agents can add photos");
 
   const intervention = await Intervention.findByPk(id, {
@@ -246,7 +283,7 @@ export async function getInterventionPhotos(id, user) {
     attributes: ["id", "assigned_user_id"],
   });
   if (!intervention) throw new Error("NOT_FOUND: Intervention not found");
-  if (user.role === "agent" && intervention.assigned_user_id !== user.id) {
+  if (normalizeRole(user.role) === "agent" && intervention.assigned_user_id !== user.id) {
     throw new Error("FORBIDDEN: You are not assigned to this intervention");
   }
 
@@ -272,7 +309,7 @@ export async function addInterventionLog(id, { action }, user) {
   });
   if (!intervention) throw new Error("NOT_FOUND: Intervention not found");
 
-  if (user.role === "agent" && intervention.assigned_user_id !== user.id) {
+  if (normalizeRole(user.role) === "agent" && intervention.assigned_user_id !== user.id) {
     throw new Error("FORBIDDEN: You are not assigned to this intervention");
   }
 
@@ -293,7 +330,7 @@ export async function getInterventionLog(id, user) {
   });
   if (!intervention) throw new Error("NOT_FOUND: Intervention not found");
 
-  if (user.role === "agent" && intervention.assigned_user_id !== user.id) {
+  if (normalizeRole(user.role) === "agent" && intervention.assigned_user_id !== user.id) {
     throw new Error("FORBIDDEN: You are not assigned to this intervention");
   }
 

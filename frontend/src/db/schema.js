@@ -1,4 +1,4 @@
-import { execSql } from "./db";
+import { execSql, queryAll } from "./db";
 
 export async function initSchema() {
   await execSql(`
@@ -11,6 +11,7 @@ export async function initSchema() {
         scheduled_at TEXT NOT NULL,
         latitude REAL,
         longitude REAL,
+        city_label TEXT,
         assigned_user_id INTEGER,
         sync_status TEXT NOT NULL,
         updated_at_local TEXT NOT NULL);`);
@@ -43,4 +44,13 @@ export async function initSchema() {
     updated_at_local TEXT NOT NULL
   );
 `);
+
+
+  const columns = await queryAll("PRAGMA table_info(interventions_local)");
+  const hasCityLabel = columns.some((col) => col.name === "city_label");
+
+  if (!hasCityLabel) {
+    await execSql("ALTER TABLE interventions_local ADD COLUMN city_label TEXT");
+  }
+
 }

@@ -43,6 +43,7 @@ export async function addLocalIntervention(data) {
     assigned_user_id = null,
     latitude = null,
     longitude = null,
+    city_label = null,
   } = data;
 
   const now = nowIso();
@@ -50,8 +51,8 @@ export async function addLocalIntervention(data) {
   await execSql(
     `
     INSERT INTO interventions_local
-    (id_local, title, description, status, scheduled_at, assigned_user_id, latitude, longitude, sync_status, updated_at_local)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (id_local, title, description, status, scheduled_at, assigned_user_id, latitude, longitude, city_label, sync_status, updated_at_local)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
       id_local,
@@ -62,6 +63,7 @@ export async function addLocalIntervention(data) {
       assigned_user_id,
       latitude,
       longitude,
+      city_label,
       SYNC_STATUS.PENDING,
       now,
     ],
@@ -76,6 +78,7 @@ export async function addLocalIntervention(data) {
     assigned_user_id,
     latitude,
     longitude,
+    city_label,
   });
 }
 
@@ -184,7 +187,7 @@ export async function markQueueSynced(id_local) {
   );
 }
 
-export async function markQueueFaield(id_local) {
+export async function markQueueFailed(id_local) {
   await execSql(
     `
     UPDATE sync_queue
@@ -194,3 +197,6 @@ export async function markQueueFaield(id_local) {
     [SYNC_STATUS.FAILED, nowIso(), id_local],
   );
 }
+
+
+export const markQueueFaield = markQueueFailed;

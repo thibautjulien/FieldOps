@@ -30,6 +30,7 @@ const Intervention = sequelize.define("Intervention", {
   },
   latitude: { type: DataTypes.FLOAT },
   longitude: { type: DataTypes.FLOAT },
+  city_label: { type: DataTypes.STRING },
 });
 
 export default Intervention;

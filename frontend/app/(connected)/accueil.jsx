@@ -1,27 +1,51 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { View, Text, TextInput, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect } from "expo-router";
 import { getMe } from "../../src/services/AuthService";
+import { DashboardSummary } from "../../src/components/DashboardSummary";
+import TodayInterventionsList from "../../src/components/TodayInterventionsList";
+import { api } from "../../src/api/client";
+import { queryAll } from "../../src/db/db";
 
 export default function Accueil() {
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
+  const [userRole, setUserRole] = useState("agent");
+  const [interventions, setInterventions] = useState([]);
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
 
-  useEffect(() => {
-    const loadName = async () => {
-      try {
-        setLoading(true);
-        const result = await getMe();
-        if (result.success) setName(result.data?.name || "");
-      } catch (err) {
-        console.error("[FieldOps] Error retrieving name : ", err);
-      } finally {
-        setLoading(false);
+  const loadAccueilData = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      const meResult = await getMe();
+      if (meResult.success) {
+        setName(meResult.data?.name || "");
+        setUserRole(meResult.data?.role || "agent");
       }
-    };
 
-    loadName();
+      const interventionsRes = await api.get("/interventions");
+      setInterventions(interventionsRes.data || []);
+
+      const pendingRows = await queryAll(
+        "SELECT COUNT(*) AS count FROM sync_queue WHERE sync_status = ?",
+        ["PENDING"],
+      );
+      const count = pendingRows?.[0]?.count ?? 0;
+      setPendingSyncCount(Number(count));
+    } catch (err) {
+      console.error("[FieldOps] Error loading accueil data:", err?.message || err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadAccueilData();
+    }, [loadAccueilData]),
+  );
 
   if (loading) {
     return (
@@ -38,7 +62,11 @@ export default function Accueil() {
 
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-[#1E1E1F]">
-      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+      <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle="light-content"
+      />
 
       <View className="flex-1 bg-[#F4F7FA]">
         <View className="bg-[#1E1E1F] px-5 pt-5 pb-14 rounded-b-3xl">
@@ -66,6 +94,14 @@ export default function Accueil() {
             />
           </View>
         </View>
+
+        <DashboardSummary
+          userRole={userRole}
+          interventions={interventions}
+          pendingSyncCount={pendingSyncCount}
+        />
+
+        <TodayInterventionsList interventions={interventions} />
       </View>
     </SafeAreaView>
   );
