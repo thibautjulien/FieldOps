@@ -20,3 +20,5 @@ api.interceptors.request.use(async (config) => {
   }
   return config;
 });
+
+console.log("[API BASE URL]", BASE_URL);

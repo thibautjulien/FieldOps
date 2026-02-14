@@ -29,7 +29,7 @@ function normalizeStatus(status = "") {
 
 function isVisibleStatus(status = "") {
   const s = normalizeStatus(status);
-  return s === "PLANIFIE" || s === "EN_COURS";
+  return s === "TERMINE" || s === "CLOS";
 }
 
 function formatHour(dateStr) {
@@ -50,7 +50,7 @@ function formatStatusLabel(status = "") {
   return map[s] || s || "-";
 }
 
-export default function TodayInterventionsList({ interventions = [] }) {
+export default function TodayInterventionsListClos({ interventions = [] }) {
   const router = useRouter();
   const todayItems = useMemo(() => {
     return interventions
@@ -77,13 +77,13 @@ export default function TodayInterventionsList({ interventions = [] }) {
             Aujourd'hui
           </Text>
           <Text className="text-xs text-slate-500">
-            {todayItems.length} intervention(s)
+            {todayItems.length} intervention(s) clôturée(s)
           </Text>
         </View>
 
         {todayItems.length === 0 ? (
           <Text className="text-slate-500">
-            Aucune intervention planifiée/en cours.
+            Aucune intervention terminées/clôturées.
           </Text>
         ) : (
           <ScrollView

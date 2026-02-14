@@ -10,6 +10,11 @@ export async function apiGetInterventionById(id) {
   return res.data;
 }
 
+export async function apiGetInterventionPhotos(id) {
+  const res = await api.get(`/interventions/${id}/photos`);
+  return res.data;
+}
+
 export async function apiUpdateInterventionStatus(id, status) {
   const res = await api.put(`/interventions/${id}`, { status });
   return res.data;

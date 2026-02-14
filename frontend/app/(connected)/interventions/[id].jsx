@@ -1,11 +1,21 @@
 import { useCallback, useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView, StatusBar } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  StatusBar,
+  Alert,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
 import {
   apiGetInterventionById,
+  apiGetInterventionPhotos,
   apiUpdateInterventionStatus,
   apiCloseIntervention,
+  apiAddInterventionPhoto,
 } from "../../../src/api/interventions";
 
 function formatHour(dateStr) {
@@ -24,8 +34,10 @@ export default function InterventionDetailScreen() {
   const { id } = useLocalSearchParams();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [photoSaving, setPhotoSaving] = useState(false);
   const [error, setError] = useState("");
   const [intervention, setIntervention] = useState(null);
+  const [photos, setPhotos] = useState({ avant: [], après: [] });
 
   const loadDetail = useCallback(async () => {
     if (!id) return;
@@ -33,8 +45,14 @@ export default function InterventionDetailScreen() {
     try {
       setLoading(true);
       setError("");
-      const data = await apiGetInterventionById(id);
+
+      const [data, photosData] = await Promise.all([
+        apiGetInterventionById(id),
+        apiGetInterventionPhotos(id),
+      ]);
+
       setIntervention(data);
+      setPhotos(photosData || { avant: [], après: [] });
     } catch (err) {
       setError(err?.response?.data?.error || "Impossible de charger le détail.");
     } finally {
@@ -49,6 +67,9 @@ export default function InterventionDetailScreen() {
   );
 
   const currentStatus = normalizeStatus(intervention?.status);
+
+  const hasAvant = (photos?.avant || []).length > 0;
+  const hasApres = (photos?.après || []).length > 0;
 
   const handleUpdate = async (type) => {
     if (!id || saving) return;
@@ -70,6 +91,38 @@ export default function InterventionDetailScreen() {
       setError(err?.response?.data?.error || "Action impossible pour cet état.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleTakePhoto = async (type) => {
+    if (!id || photoSaving) return;
+
+    try {
+      setPhotoSaving(true);
+      setError("");
+
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert("Permission refusée", "Autorise la caméra pour ajouter une photo.");
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ["images"],
+        allowsEditing: false,
+        quality: 0.7,
+      });
+
+      if (result.canceled || !result.assets?.length) return;
+
+      const uri = result.assets[0].uri;
+      await apiAddInterventionPhoto(id, { type, fileUri: uri });
+
+      await loadDetail();
+    } catch (err) {
+      setError(err?.response?.data?.error || "Impossible d'ajouter la photo.");
+    } finally {
+      setPhotoSaving(false);
     }
   };
 
@@ -109,12 +162,28 @@ export default function InterventionDetailScreen() {
                 <Text className="font-semibold text-[#111827]">Description :</Text>{" "}
                 {intervention.description || "-"}
               </Text>
-              <Text className="text-slate-700">
-                <Text className="font-semibold text-[#111827]">Position :</Text>{" "}
-                {intervention.latitude ?? "-"}, {intervention.longitude ?? "-"}
-              </Text>
             </View>
           </View>
+
+          {currentStatus === "EN_COURS" && (
+            <View className="mt-4 rounded-2xl bg-white p-5 border border-[#E2E8F0]">
+              <Text className="text-lg font-semibold text-[#111827] mb-3">Photos chantier</Text>
+
+              <PhotoCard
+                title="Photo AVANT"
+                done={hasAvant}
+                onPress={() => handleTakePhoto("AVANT")}
+                disabled={photoSaving}
+              />
+
+              <PhotoCard
+                title="Photo APRES"
+                done={hasApres}
+                onPress={() => handleTakePhoto("APRES")}
+                disabled={photoSaving}
+              />
+            </View>
+          )}
 
           <View className="mt-4 rounded-2xl bg-white p-5 border border-[#E2E8F0]">
             <Text className="text-lg font-semibold text-[#111827] mb-3">Actions</Text>
@@ -122,7 +191,7 @@ export default function InterventionDetailScreen() {
             <View className="gap-2">
               {currentStatus === "PLANIFIE" && (
                 <ActionBtn
-                  label="Prendre en charge (EN_COURS)"
+                  label="Prendre en charge"
                   onPress={() => handleUpdate("EN_COURS")}
                   disabled={saving}
                 />
@@ -130,7 +199,7 @@ export default function InterventionDetailScreen() {
 
               {currentStatus === "EN_COURS" && (
                 <ActionBtn
-                  label="Marquer terminée (TERMINE)"
+                  label="Marquer terminée"
                   onPress={() => handleUpdate("TERMINE")}
                   disabled={saving}
                 />
@@ -138,7 +207,7 @@ export default function InterventionDetailScreen() {
 
               {currentStatus === "TERMINE" && (
                 <ActionBtn
-                  label="Clôturer (CLOS)"
+                  label="Clôturer"
                   onPress={() => handleUpdate("CLOSE")}
                   disabled={saving}
                 />
@@ -166,6 +235,22 @@ function ActionBtn({ label, onPress, disabled }) {
       className={`rounded-xl px-4 py-3 ${disabled ? "bg-slate-300" : "bg-[#1F2937]"}`}
     >
       <Text className="text-white font-semibold text-center">{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+function PhotoCard({ title, done, onPress, disabled }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={disabled}
+      activeOpacity={0.85}
+      className="mb-2 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-4"
+    >
+      <Text className="text-[#111827] font-semibold">{title}</Text>
+      <Text className="text-xs text-slate-500 mt-1">
+        {done ? "Photo ajoutée" : "Appuie pour ouvrir la caméra"}
+      </Text>
     </TouchableOpacity>
   );
 }
