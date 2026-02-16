@@ -1,4 +1,5 @@
-import { api } from "./client";
+import { api, API_BASE_URL } from "./client";
+import { getToken } from "../utils/authStorage";
 
 export async function apiCreateIntervention(data) {
   const res = await api.post("/interventions", data);
@@ -25,21 +26,42 @@ export async function apiCloseIntervention(id, confirmed = false) {
   return res.data;
 }
 
-export async function apiAddInterventionPhoto(id, { type, fileUri }) {
-  const form = new FormData();
+export async function apiAddInterventionPhoto(
+  id,
+  { type, fileUri, mimeType, fileName },
+) {
+  const normalizedUri =
+    fileUri.startsWith("file://") || fileUri.startsWith("content://")
+      ? fileUri
+      : `file://${fileUri}`;
 
+  const ext = mimeType?.split("/")?.[1] || "jpg";
+  const safeName = fileName || `photo-${Date.now()}.${ext}`;
+
+  const form = new FormData();
   form.append("type", type);
   form.append("photo", {
-    uri: fileUri,
-    name: "photo.jpg",
-    type: "image/jpeg",
+    uri: normalizedUri,
+    name: safeName,
+    type: mimeType || "image/jpeg",
   });
 
-  const res = await api.post(`/interventions/${id}/photos`, form, {
-    headers: { "Content-Type": "multipart/form-data" },
+  const token = await getToken();
+  const response = await fetch(`${API_BASE_URL}/interventions/${id}/photos`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
   });
 
-  return res.data;
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const err = new Error(data?.error || "Photo upload failed");
+    err.response = { status: response.status, data };
+    throw err;
+  }
+
+  return data;
 }
 
 export async function apiAddInterventionLog(id, { action }) {

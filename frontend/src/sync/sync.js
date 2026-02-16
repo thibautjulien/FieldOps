@@ -87,9 +87,7 @@ export async function runSync() {
           type: "image/jpeg",
         });
 
-        await api.post(`/interventions/${idServer}/photos`, form, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        await api.post(`/interventions/${idServer}/photos`, form);
 
         await markPhotoSynced(item.entity_id_local);
         await markQueueSynced(item.id_local);

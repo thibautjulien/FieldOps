@@ -2,6 +2,7 @@ import axios from "axios";
 import { api } from "../api/client";
 import { saveToken, removeToken } from "../utils/authStorage";
 
+// Permet de se connecter
 export const login = async ({ email, password }) => {
   try {
     const response = await api.post("/auth/login", { email, password });
@@ -26,6 +27,19 @@ export const getMe = async () => {
     return { success: true, data: response.data, message: null };
   } catch {
     return { success: false, message: "Impossible de récupérer le profil " };
+  }
+};
+
+export const updateMe = async ({ name, email }) => {
+  try {
+    const response = await api.put("/user/me", { name, email });
+    return { success: true, data: response.data, message: null };
+  } catch (err) {
+    return {
+      success: false,
+      message:
+        err?.response?.data?.error || "Impossible de mettre à jour le profil",
+    };
   }
 };
 

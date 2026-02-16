@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import { DataTypes } from "sequelize";
 import { sequelize } from "./models/index.js";
+import path from "path";
+import { fileURLToPath } from "url";
 
 // Routes
 import authRouter from "./routes/auth.routes.js";
@@ -10,8 +12,13 @@ import interventionsRouter from "./routes/interventions.routes.js";
 
 const app = express();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 app.use(cors());
 app.use(express.json());
+
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.get("/health", (_req, res) => {
   return res.status(200).json({ status: "ok" });
@@ -20,7 +27,6 @@ app.get("/health", (_req, res) => {
 app.use("/auth", authRouter);
 app.use("/user", userRouter);
 app.use("/interventions", interventionsRouter);
-
 
 async function ensureSchemaUpdates() {
   const queryInterface = sequelize.getQueryInterface();

@@ -125,7 +125,9 @@ export async function addInterventionPhotosController(req, res) {
     const user = req.user;
     const id = req.params.id;
     const { type } = req.body;
-    const filePath = req.file?.path;
+    const filePath = req.file?.filename
+      ? `uploads/${req.file.filename}`
+      : req.file?.path;
 
     const photo = await addInterventionPhotos(id, { type, filePath }, user);
     return res.status(201).json(photo);

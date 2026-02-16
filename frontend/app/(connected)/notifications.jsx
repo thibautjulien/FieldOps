@@ -1,20 +1,21 @@
 import { useCallback, useState } from "react";
-import { View, Text, TextInput, StatusBar, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  StatusBar,
+  ScrollView,
+  TouchableOpacity,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "expo-router";
-import { getMe } from "../../src/services/AuthService";
-import { DashboardSummary } from "../../src/components/DashboardSummary";
-import TodayInterventionsList from "../../src/components/TodayInterventionsList";
-import TodayInterventionsListClos from "../../src/components/TodayInterventionsListClos";
-import { api } from "../../src/api/client";
-import { queryAll } from "../../src/db/db";
+import { getMe, updateMe } from "../../src/services/AuthService";
 
 export default function Accueil() {
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
   const [userRole, setUserRole] = useState("agent");
-  const [interventions, setInterventions] = useState([]);
-  const [pendingSyncCount, setPendingSyncCount] = useState(0);
+  const [email, setEmail] = useState("");
 
   const loadAccueilData = useCallback(async () => {
     try {
@@ -22,19 +23,10 @@ export default function Accueil() {
 
       const meResult = await getMe();
       if (meResult.success) {
-        setName(meResult.data?.name || "");
+        setName(meResult.data?.name || "Inconnu");
         setUserRole(meResult.data?.role || "agent");
+        setEmail(meResult.data?.email || "Inconnu");
       }
-
-      const interventionsRes = await api.get("/interventions");
-      setInterventions(interventionsRes.data || []);
-
-      const pendingRows = await queryAll(
-        "SELECT COUNT(*) AS count FROM sync_queue WHERE sync_status = ?",
-        ["PENDING"],
-      );
-      const count = pendingRows?.[0]?.count ?? 0;
-      setPendingSyncCount(Number(count));
     } catch (err) {
       console.error(
         "[FieldOps] Error loading accueil data:",
@@ -82,7 +74,7 @@ export default function Accueil() {
             <View>
               <Text className="text-sm text-gray-300">Salut {name} !</Text>
               <Text className="mt-2 text-3xl font-bold leading-9 text-white">
-                Gère tes{"\n"}interventions
+                Centre des{"\n"}notifications
               </Text>
             </View>
 
@@ -91,13 +83,40 @@ export default function Accueil() {
             </View>
           </View>
         </View>
-        <DashboardSummary
-          userRole={userRole}
-          interventions={interventions}
-          pendingSyncCount={pendingSyncCount}
-        />
-        <TodayInterventionsList interventions={interventions} />
-        <TodayInterventionsListClos interventions={interventions} />
+
+        <View className="px-5 mt-10 mb-10">
+          <View
+            className="rounded-2xl bg-white p-5 border border-[#E2E8F0]"
+            style={{
+              shadowColor: "#0F172A",
+              shadowOffset: { width: 0, height: 12 },
+              shadowOpacity: 0.05,
+              shadowRadius: 18,
+              elevation: 1,
+            }}
+          >
+            <View className="flex-row items-center justify-between mb-3">
+              <Text className="text-[#111827] font-semibold text-lg">
+                Informations profil
+              </Text>
+              <Text className="text-sm uppercase mr-1 text-slate-500">
+                {userRole}
+              </Text>
+            </View>
+
+            <View>
+              <Text className="text-slate-500 mt-6">
+                <Text className="text-[#111827] font-semibold">Nom : </Text>
+                {name}
+              </Text>
+
+              <Text className="text-slate-500 mt-6">
+                <Text className="text-[#111827] font-semibold">Email : </Text>
+                {email}
+              </Text>
+            </View>
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

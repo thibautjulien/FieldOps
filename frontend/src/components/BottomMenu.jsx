@@ -24,14 +24,14 @@ export default function BottomMenu({ isAdmin }) {
 
   const tabsRight = [
     {
-      key: "cloche",
-      route: "/cloche",
+      key: "notifications",
+      route: "/notifications",
       iconActive: require("../../assets/images/cloche.png"),
       iconInactive: require("../../assets/images/cloche-gray.png"),
     },
     {
-      key: "user",
-      route: "/user",
+      key: "profil",
+      route: "/profil",
       iconActive: require("../../assets/images/user.png"),
       iconInactive: require("../../assets/images/user-gray.png"),
     },

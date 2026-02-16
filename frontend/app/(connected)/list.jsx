@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -17,9 +17,17 @@ export default function List() {
   const [name, setName] = useState("");
   const [userRole, setUserRole] = useState("agent");
   const [interventions, setInterventions] = useState([]);
+  const [search, setSearch] = useState("");
 
   const router = useRouter();
   const initial = (name?.trim()?.[0] || "A").toUpperCase();
+
+  function normalize(value) {
+    return String(value || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+  }
 
   function normalizeStatus(status = "") {
     return String(status).trim().toUpperCase();
@@ -72,6 +80,23 @@ export default function List() {
     .filter((it) => isInNextDays(it.scheduled_at, 7))
     .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at));
 
+  const filteredListData = useMemo(() => {
+    const q = normalize(search.trim());
+    if (!q) return listData;
+
+    return listData.filter((it) => {
+      const title = normalize(it.title);
+      const city = normalize(it.city_label);
+      const status = normalize(it.status); // PLANIFIE, EN_COURS, TERMINE, CLOS
+      return title.includes(q) || city.includes(q) || status.includes(q);
+    });
+  }, [listData, search]);
+
+  const suggestions = useMemo(() => {
+    if (!search.trim()) return [];
+    return filteredListData.slice(0, 5);
+  }, [filteredListData, search]);
+
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-[#1E1E1F]">
       <StatusBar
@@ -99,11 +124,35 @@ export default function List() {
         <View className="-mt-8 px-5">
           <View className="rounded-2xl border border-[#E2E8F0] bg-white px-4 py-3 shadow-sm">
             <TextInput
-              placeholder="Recherche (bientôt)"
-              editable={false}
-              className="text-base text-gray-400"
+              placeholder="Recherche (titre, ville, status)"
+              value={search}
+              onChangeText={setSearch}
+              className="text-base text-[#111827]"
               placeholderTextColor="#9CA3AF"
             />
+
+            {suggestions.length > 0 && (
+              <View className="mt-2 rounded-xl border border-[#E2E8F0] bg-white">
+                {suggestions.map((it, index) => (
+                  <TouchableOpacity
+                    key={String(it.id)}
+                    onPress={() => setSearch(it.title)}
+                    className={`px-3 py-2 ${index !== suggestions.length - 1 ? "border-b border-[#F1F5F9]" : ""}`}
+                  >
+                    <Text
+                      className="text-[#111827] font-medium"
+                      numberOfLines={1}
+                    >
+                      {it.title}
+                    </Text>
+                    <Text className="text-xs text-slate-500" numberOfLines={1}>
+                      {it.city_label || "Ville inconnue"} -{" "}
+                      {normalizeStatus(it.status)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
         </View>
 
@@ -122,12 +171,12 @@ export default function List() {
         >
           {loading ? (
             <Text className="text-slate-500">Chargement...</Text>
-          ) : listData.length === 0 ? (
+          ) : filteredListData.length === 0 ? (
             <Text className="text-slate-500">
               Aucune intervention sur la période.
             </Text>
           ) : (
-            listData.map((it) => (
+            filteredListData.map((it) => (
               <TouchableOpacity
                 key={String(it.id)}
                 activeOpacity={0.85}

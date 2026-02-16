@@ -21,4 +21,4 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
-console.log("[API BASE URL]", BASE_URL);
+export const API_BASE_URL = BASE_URL;
