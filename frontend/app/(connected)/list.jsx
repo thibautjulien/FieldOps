@@ -11,6 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { getMe } from "../../src/services/AuthService";
 import { api } from "../../src/api/client";
+import { queryAll, execSql } from "../../src/db/db";
 
 export default function List() {
   const [loading, setLoading] = useState(true);
@@ -51,6 +52,48 @@ export default function List() {
     });
   }
 
+  async function cacheInterventions(rows = []) {
+    await execSql("DELETE FROM interventions_local");
+
+    for (const it of rows) {
+      await execSql(
+        `INSERT INTO interventions_local
+      (id_local, id_server, title, description, status, scheduled_at, city_label, assigned_user_id, sync_status, updated_at_local)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          `srv_${it.id}`,
+          it.id,
+          it.title || "",
+          it.description || "",
+          it.status || "PLANIFIE",
+          it.scheduled_at || new Date().toISOString(),
+          it.city_label || null,
+          it.assigned_user_id || null,
+          "SYNCED",
+          new Date().toISOString(),
+        ],
+      );
+    }
+  }
+
+  async function readLocalInterventions() {
+    const rows = await queryAll(
+      `SELECT id_server, id_local, title, description, status, scheduled_at, city_label, assigned_user_id
+     FROM interventions_local
+     ORDER BY scheduled_at ASC`,
+    );
+
+    return rows.map((r) => ({
+      id: r.id_server ?? r.id_local,
+      title: r.title,
+      description: r.description,
+      status: r.status,
+      scheduled_at: r.scheduled_at,
+      city_label: r.city_label,
+      assigned_user_id: r.assigned_user_id,
+    }));
+  }
+
   const loadListData = useCallback(async () => {
     try {
       setLoading(true);
@@ -61,10 +104,16 @@ export default function List() {
         setUserRole((meResult.data?.role || "agent").toLowerCase());
       }
 
-      const res = await api.get("/interventions");
-      setInterventions(res.data || []);
-    } catch (err) {
-      console.error("[FieldOps] Error loading list data:", err?.message || err);
+      try {
+        const res = await api.get("/interventions");
+        const list = res.data || [];
+        setInterventions(list);
+        await cacheInterventions(list);
+      } catch {
+        const local = await readLocalInterventions();
+        setInterventions(local);
+        console.log("[FieldOps] list offline mode: local data loaded");
+      }
     } finally {
       setLoading(false);
     }

@@ -102,22 +102,12 @@ export async function createIntervention(data, user) {
     title,
     description,
     status = normalizeStatus(data.status || "PLANIFIE"),
-    latitude,
-    longitude,
     city_label,
     assigned_user_id,
     scheduled_at,
   } = data;
 
-  if (
-    !title ||
-    !description ||
-    !status ||
-    !latitude ||
-    !longitude ||
-    !scheduled_at ||
-    !assigned_user_id
-  ) {
+  if (!title || !description || !status || !scheduled_at || !assigned_user_id) {
     throw new Error("BAD_REQUEST: Missing required fields");
   }
 
@@ -135,8 +125,6 @@ export async function createIntervention(data, user) {
     title,
     description,
     status,
-    latitude,
-    longitude,
     city_label,
     assigned_user_id,
     scheduled_at,

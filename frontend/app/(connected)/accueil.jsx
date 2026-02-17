@@ -7,7 +7,7 @@ import { DashboardSummary } from "../../src/components/DashboardSummary";
 import TodayInterventionsList from "../../src/components/TodayInterventionsList";
 import TodayInterventionsListClos from "../../src/components/TodayInterventionsListClos";
 import { api } from "../../src/api/client";
-import { queryAll } from "../../src/db/db";
+import { queryAll, execSql } from "../../src/db/db";
 
 export default function Accueil() {
   const [loading, setLoading] = useState(true);
@@ -15,6 +15,48 @@ export default function Accueil() {
   const [userRole, setUserRole] = useState("agent");
   const [interventions, setInterventions] = useState([]);
   const [pendingSyncCount, setPendingSyncCount] = useState(0);
+
+  async function cacheInterventions(rows = []) {
+    await execSql("DELETE FROM interventions_local");
+
+    for (const it of rows) {
+      await execSql(
+        `INSERT INTO interventions_local
+      (id_local, id_server, title, description, status, scheduled_at, city_label, assigned_user_id, sync_status, updated_at_local)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          `srv_${it.id}`,
+          it.id,
+          it.title || "",
+          it.description || "",
+          it.status || "PLANIFIE",
+          it.scheduled_at || new Date().toISOString(),
+          it.city_label || null,
+          it.assigned_user_id || null,
+          "SYNCED",
+          new Date().toISOString(),
+        ],
+      );
+    }
+  }
+
+  async function readLocalInterventions() {
+    const rows = await queryAll(
+      `SELECT id_server, id_local, title, description, status, scheduled_at, city_label, assigned_user_id
+     FROM interventions_local
+     ORDER BY scheduled_at ASC`,
+    );
+
+    return rows.map((r) => ({
+      id: r.id_server ?? r.id_local,
+      title: r.title,
+      description: r.description,
+      status: r.status,
+      scheduled_at: r.scheduled_at,
+      city_label: r.city_label,
+      assigned_user_id: r.assigned_user_id,
+    }));
+  }
 
   const loadAccueilData = useCallback(async () => {
     try {
@@ -26,8 +68,10 @@ export default function Accueil() {
         setUserRole(meResult.data?.role || "agent");
       }
 
-      const interventionsRes = await api.get("/interventions");
-      setInterventions(interventionsRes.data || []);
+      const res = await api.get("/interventions");
+      const list = res.data || [];
+      setInterventions(list);
+      await cacheInterventions(list);
 
       const pendingRows = await queryAll(
         "SELECT COUNT(*) AS count FROM sync_queue WHERE sync_status = ?",
@@ -36,6 +80,8 @@ export default function Accueil() {
       const count = pendingRows?.[0]?.count ?? 0;
       setPendingSyncCount(Number(count));
     } catch (err) {
+      const local = await readLocalInterventions();
+      setInterventions(local);
       console.error(
         "[FieldOps] Error loading accueil data:",
         err?.message || err,

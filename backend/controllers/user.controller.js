@@ -1,4 +1,5 @@
 import User from "../models/User.model.js";
+import { fn, col, where } from "sequelize";
 
 export async function getUserMeController(req, res) {
   try {
@@ -45,5 +46,21 @@ export async function putUserMeController(req, res) {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Internal error" });
+  }
+}
+
+export async function getAgentsController(req, res) {
+  try {
+    const agents = await User.findAll({
+      where: where(fn("LOWER", col("role")), "agent"),
+      attributes: ["id", "name", "email"],
+      order: [["name", "ASC"]],
+    });
+
+    return res.status(200).json(agents);
+  } catch (err) {
+    console.error(err);
+
+    return res.status(500).json({ error: "Internal error" });
   }
 }
