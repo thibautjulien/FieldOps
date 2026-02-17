@@ -12,19 +12,18 @@ function normalizeStatus(status = "") {
 
   const map = {
     PLANIFIE: "PLANIFIE",
-    "PLANIFIÉ": "PLANIFIE",
+    PLANIFIÉ: "PLANIFIE",
     EN_COURS: "EN_COURS",
     "EN COURS": "EN_COURS",
     TERMINE: "TERMINE",
-    "TERMINÉ": "TERMINE",
+    TERMINÉ: "TERMINE",
     CLOS: "CLOS",
     CLOTURE: "CLOS",
-    "CLÔTURÉ": "CLOS",
+    CLÔTURÉ: "CLOS",
   };
 
   return map[raw] || raw;
 }
-
 
 export async function listInterventions(user) {
   if (!user) {
@@ -40,7 +39,14 @@ export async function listInterventions(user) {
   }
 
   const listInterventions = await Intervention.findAll({
-    attributes: ["id", "title", "status", "scheduled_at", "city_label", "assigned_user_id"],
+    attributes: [
+      "id",
+      "title",
+      "status",
+      "scheduled_at",
+      "city_label",
+      "assigned_user_id",
+    ],
     where: whereClause,
   });
 
@@ -65,13 +71,22 @@ export async function getInterventionById(id, user) {
       "city_label",
       "assigned_user_id",
     ],
+    include: [
+      {
+        model: User,
+        attributes: ["id", "name", "email"],
+      },
+    ],
   });
 
   if (!intervention) {
     throw new Error("NOT_FOUND: Intervention not found");
   }
 
-  if (normalizeRole(user.role) === "agent" && intervention.assigned_user_id !== user.id) {
+  if (
+    normalizeRole(user.role) === "agent" &&
+    intervention.assigned_user_id !== user.id
+  ) {
     throw new Error("FORBIDDEN: You are not assigned to this intervention");
   }
 
@@ -168,7 +183,10 @@ export async function updateIntervention(id, data, user) {
     throw new Error("FORBIDDEN: Intervention is closed and cannot be updated");
   }
 
-  if (normalizeRole(user.role) === "agent" && intervention.assigned_user_id !== user.id) {
+  if (
+    normalizeRole(user.role) === "agent" &&
+    intervention.assigned_user_id !== user.id
+  ) {
     throw new Error("FORBIDDEN: You are not assigned to this intervention");
   }
 
@@ -283,7 +301,10 @@ export async function getInterventionPhotos(id, user) {
     attributes: ["id", "assigned_user_id"],
   });
   if (!intervention) throw new Error("NOT_FOUND: Intervention not found");
-  if (normalizeRole(user.role) === "agent" && intervention.assigned_user_id !== user.id) {
+  if (
+    normalizeRole(user.role) === "agent" &&
+    intervention.assigned_user_id !== user.id
+  ) {
     throw new Error("FORBIDDEN: You are not assigned to this intervention");
   }
 
@@ -309,7 +330,10 @@ export async function addInterventionLog(id, { action }, user) {
   });
   if (!intervention) throw new Error("NOT_FOUND: Intervention not found");
 
-  if (normalizeRole(user.role) === "agent" && intervention.assigned_user_id !== user.id) {
+  if (
+    normalizeRole(user.role) === "agent" &&
+    intervention.assigned_user_id !== user.id
+  ) {
     throw new Error("FORBIDDEN: You are not assigned to this intervention");
   }
 
@@ -330,7 +354,10 @@ export async function getInterventionLog(id, user) {
   });
   if (!intervention) throw new Error("NOT_FOUND: Intervention not found");
 
-  if (normalizeRole(user.role) === "agent" && intervention.assigned_user_id !== user.id) {
+  if (
+    normalizeRole(user.role) === "agent" &&
+    intervention.assigned_user_id !== user.id
+  ) {
     throw new Error("FORBIDDEN: You are not assigned to this intervention");
   }
 
@@ -342,6 +369,34 @@ export async function getInterventionLog(id, user) {
         attributes: ["id", "name", "email"],
       },
     ],
+  });
+
+  return logs;
+}
+
+export async function getRecentInterventionLogs(user) {
+  if (!user) throw new Error("UNAUTHORIZED: Missing or invalid token");
+
+  const includeIntervention = {
+    model: Intervention,
+    attributes: ["id", "title", "city_label", "assigned_user_id"],
+  };
+
+  if (normalizeRole(user.role) === "agent") {
+    includeIntervention.where = { assigned_user_id: user.id };
+  }
+
+  const logs = await InterventionLog.findAll({
+    attributes: ["id", "action", "createdAt", "intervention_id", "user_id"],
+    include: [
+      {
+        model: User,
+        attributes: ["id", "name", "email"],
+      },
+      includeIntervention,
+    ],
+    order: [["createdAt", "DESC"]],
+    limit: 50,
   });
 
   return logs;

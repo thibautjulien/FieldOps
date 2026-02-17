@@ -34,7 +34,7 @@ export default function LoginScreen() {
       return;
     }
 
-    console.log("[FieldOps] Login réussi : ", result.data);
+    console.log("[FieldOps] Login réussi");
 
     const { token } = result.data;
 

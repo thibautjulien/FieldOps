@@ -61,7 +61,7 @@ export default function TodayInterventionsListClos({ interventions = [] }) {
   const hasScrollableList = todayItems.length > 3;
 
   return (
-    <View className="px-5 mt-10 mb-10">
+    <View className="px-5 mt-7 mb-10">
       <View
         className="rounded-2xl bg-white p-5 border border-[#E2E8F0]"
         style={{

@@ -9,12 +9,20 @@ import {
   getInterventionPhotosController,
   addInterventionLogController,
   getInterventionLogController,
+  recentInterventionLogsController,
 } from "../controllers/interventions.controller.js";
 import { requireAuth } from "../middlewares/auth.middleware.js";
 import { requireRole } from "../middlewares/role.middleware.js";
 import upload from "../middlewares/upload.middleware.js";
 
 const interventionsRouter = Router();
+
+// RECENT LOGS
+interventionsRouter.get(
+  "/logs/recent",
+  requireAuth,
+  recentInterventionLogsController,
+);
 
 // LISTE
 interventionsRouter.get("", requireAuth, listInterventionsController);
@@ -49,7 +57,7 @@ interventionsRouter.get(
 
 // LOGS
 interventionsRouter.post(
-  "/:id/logs",
+  "/:id/logs/",
   requireAuth,
   addInterventionLogController,
 );

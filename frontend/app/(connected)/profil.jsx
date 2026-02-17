@@ -11,7 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "expo-router";
 import { getMe, updateMe } from "../../src/services/AuthService";
 
-export default function Accueil() {
+export default function Profil() {
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
   const [userRole, setUserRole] = useState("agent");
@@ -22,7 +22,7 @@ export default function Accueil() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const loadAccueilData = useCallback(async () => {
+  const loadProfilData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -61,7 +61,7 @@ export default function Accueil() {
       }
 
       setSuccess("Profil mis à jour");
-      await loadAccueilData();
+      await loadProfilData();
     } finally {
       setSaving(false);
     }
@@ -69,8 +69,8 @@ export default function Accueil() {
 
   useFocusEffect(
     useCallback(() => {
-      loadAccueilData();
-    }, [loadAccueilData]),
+      loadProfilData();
+    }, [loadProfilData]),
   );
 
   if (loading) {

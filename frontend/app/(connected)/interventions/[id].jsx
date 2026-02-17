@@ -17,6 +17,7 @@ import {
   apiUpdateInterventionStatus,
   apiCloseIntervention,
   apiAddInterventionPhoto,
+  apiAddInterventionLog,
 } from "../../../src/api/interventions";
 import { API_BASE_URL } from "../../../src/api/client";
 import { getMe } from "../../../src/services/AuthService";
@@ -38,7 +39,8 @@ function buildPhotoUrl(filePath = "") {
 
   const normalized = String(filePath).replace(/\\/g, "/");
   const uploadsIndex = normalized.indexOf("uploads/");
-  const relativePath = uploadsIndex >= 0 ? normalized.slice(uploadsIndex) : normalized;
+  const relativePath =
+    uploadsIndex >= 0 ? normalized.slice(uploadsIndex) : normalized;
 
   return `${API_BASE_URL}/${relativePath.replace(/^\/+/, "")}`;
 }
@@ -92,6 +94,7 @@ export default function InterventionDetailScreen() {
   );
 
   const currentStatus = normalizeStatus(intervention?.status);
+  const assignedAgent = intervention?.User || null;
 
   const hasAvant = (photos?.avant || []).length > 0;
   const hasApres = (photos?.apres || []).length > 0;
@@ -103,12 +106,24 @@ export default function InterventionDetailScreen() {
       setSaving(true);
       setError("");
 
+      const from = currentStatus;
+      let to = null;
+
       if (type === "EN_COURS") {
-        await apiUpdateInterventionStatus(id, "EN_COURS");
+        to = "EN_COURS";
+        await apiUpdateInterventionStatus(id, to);
       } else if (type === "TERMINE") {
-        await apiUpdateInterventionStatus(id, "TERMINE");
+        to = "TERMINE";
+        await apiUpdateInterventionStatus(id, to);
       } else if (type === "CLOSE") {
+        to = "CLOS";
         await apiCloseIntervention(id);
+      }
+
+      if (to) {
+        await apiAddInterventionLog(id, {
+          action: `STATUS_CHANGED:${from}->${to}`,
+        });
       }
 
       await loadDetail();
@@ -159,6 +174,8 @@ export default function InterventionDetailScreen() {
         mimeType: asset.mimeType,
         fileName: asset.fileName,
       });
+
+      await apiAddInterventionLog(id, { action: `PHOTO_ADDED:${type}` });
 
       await loadDetail();
     } catch (err) {
@@ -224,6 +241,17 @@ export default function InterventionDetailScreen() {
                 <Text className="font-semibold text-[#111827]">Statut :</Text>{" "}
                 {normalizeStatus(intervention.status)}
               </Text>
+
+              {userRole === "admin" && (
+                <Text className="text-slate-700">
+                  <Text className="font-semibold text-[#111827]">
+                    Agent assigné :
+                  </Text>{" "}
+                  {assignedAgent?.name || "Non renseigné"}
+                  {assignedAgent?.email ? ` \n(${assignedAgent.email})` : ""}
+                </Text>
+              )}
+
               <Text className="text-slate-700">
                 <Text className="font-semibold text-[#111827]">
                   Description :

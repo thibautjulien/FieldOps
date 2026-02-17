@@ -30,6 +30,10 @@ export async function apiAddInterventionPhoto(
   id,
   { type, fileUri, mimeType, fileName },
 ) {
+  if (!fileUri) {
+    throw new Error("fileUri manquant");
+  }
+
   const normalizedUri =
     fileUri.startsWith("file://") || fileUri.startsWith("content://")
       ? fileUri
@@ -46,25 +50,21 @@ export async function apiAddInterventionPhoto(
     type: mimeType || "image/jpeg",
   });
 
-  const token = await getToken();
-  const response = await fetch(`${API_BASE_URL}/interventions/${id}/photos`, {
-    method: "POST",
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    body: form,
+  const res = await api.post(`/interventions/${id}/photos`, form, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
   });
 
-  const data = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    const err = new Error(data?.error || "Photo upload failed");
-    err.response = { status: response.status, data };
-    throw err;
-  }
-
-  return data;
+  return res.data;
 }
 
 export async function apiAddInterventionLog(id, { action }) {
   const res = await api.post(`/interventions/${id}/logs`, { action });
+  return res.data;
+}
+
+export async function apiGetRecentInterventionLogs() {
+  const res = await api.get("/interventions/logs/recent");
   return res.data;
 }

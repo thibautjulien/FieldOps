@@ -8,6 +8,7 @@ import {
   getInterventionPhotos,
   addInterventionLog,
   getInterventionLog,
+  getRecentInterventionLogs,
 } from "../services/interventions.service.js";
 
 export async function listInterventionsController(req, res) {
@@ -216,8 +217,8 @@ export async function getInterventionLogController(req, res) {
     const user = req.user;
     const id = req.params.id;
 
-    const log = await addInterventionLog(id, user);
-    return res.status(201).json(log);
+    const logs = await getInterventionLog(id, user);
+    return res.status(200).json(logs);
   } catch (err) {
     console.error(err);
 
@@ -231,6 +232,23 @@ export async function getInterventionLogController(req, res) {
 
     if (err.message.startsWith("NOT_FOUND")) {
       return res.status(404).json({ error: err.message });
+    }
+
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+export async function recentInterventionLogsController(req, res) {
+  try {
+    const user = req.user;
+    const logs = await getRecentInterventionLogs(user);
+
+    return res.status(200).json(logs);
+  } catch (err) {
+    console.error(err);
+
+    if (err.message.startsWith("UNAUTHORIZED")) {
+      return res.status(401).json({ error: err.message });
     }
 
     return res.status(500).json({ error: err.message });
