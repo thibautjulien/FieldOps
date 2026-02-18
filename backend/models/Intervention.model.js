@@ -19,6 +19,9 @@ const Intervention = sequelize.define("Intervention", {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  comment: {
+    type: DataTypes.TEXT,
+  },
   scheduled_at: {
     type: DataTypes.DATE,
     allowNull: false,

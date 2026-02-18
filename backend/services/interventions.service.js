@@ -43,6 +43,7 @@ export async function listInterventions(user) {
       "id",
       "title",
       "status",
+      "comment",
       "scheduled_at",
       "city_label",
       "assigned_user_id",
@@ -64,6 +65,7 @@ export async function getInterventionById(id, user) {
       "title",
       "description",
       "status",
+      "comment",
       "scheduled_at",
       "is_closed",
       "latitude",
@@ -154,6 +156,7 @@ export async function updateIntervention(id, data, user) {
       "title",
       "description",
       "status",
+      "comment",
       "latitude",
       "longitude",
       "city_label",
@@ -191,6 +194,22 @@ export async function updateIntervention(id, data, user) {
     intervention.status = nextStatus;
   }
 
+  if (data.comment !== undefined) {
+    if (currentStatus !== "EN_COURS") {
+      throw new Error(
+        "FORBIDDEN: Comment can only be edited when intervention is EN_COURS",
+      );
+    }
+    
+    const nextComment = String(data.comment || "").trim();
+
+    if (nextComment.length > 1000) {
+      throw new Error("BAD_REQUEST: Comment too long (max 1000 chars)");
+    }
+
+    intervention.comment = nextComment;
+  }
+
   if (normalizeRole(user.role) === "agent") {
     if (
       data.title !== undefined ||
@@ -210,6 +229,7 @@ export async function updateIntervention(id, data, user) {
       intervention.description = data.description;
     if (data.scheduled_at != undefined)
       intervention.scheduled_at = data.scheduled_at;
+    if (data.comment != undefined) intervention.comment = data.comment;
     if (data.latitude != undefined) intervention.latitude = data.latitude;
     if (data.longitude != undefined) intervention.longitude = data.longitude;
     if (data.city_label != undefined) intervention.city_label = data.city_label;
