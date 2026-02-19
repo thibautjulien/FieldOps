@@ -7,6 +7,7 @@ import {
   StatusBar,
   Alert,
   Image,
+  TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
@@ -18,8 +19,9 @@ import {
   apiCloseIntervention,
   apiAddInterventionPhoto,
   apiAddInterventionLog,
+  apiUpdateInterventionComment,
 } from "../../../src/api/interventions";
-import { API_BASE_URL } from "../../../src/api/client";
+import { api, API_BASE_URL } from "../../../src/api/client";
 import { getMe } from "../../../src/services/AuthService";
 
 function formatHour(dateStr) {
@@ -55,6 +57,7 @@ export default function InterventionDetailScreen() {
   const [intervention, setIntervention] = useState(null);
   const [photos, setPhotos] = useState({ avant: [], apres: [] });
   const [userRole, setUserRole] = useState("agent");
+  const [comment, setComment] = useState("");
 
   const loadDetail = useCallback(async () => {
     if (!id) return;
@@ -74,6 +77,7 @@ export default function InterventionDetailScreen() {
       }
 
       setIntervention(data);
+      setComment(data?.comment || "");
       setPhotos({
         avant: photosData?.avant || [],
         apres: photosData?.apres || photosData?.["après"] || [],
@@ -195,6 +199,25 @@ export default function InterventionDetailScreen() {
     }
   };
 
+  const handleSaveComment = async () => {
+    if (!id || saving) return;
+
+    try {
+      setSaving(true);
+      setError("");
+
+      await apiUpdateInterventionComment(id, comment);
+      await apiAddInterventionLog(id, { action: "COMMENT_UPDATED" });
+      await loadDetail();
+    } catch (err) {
+      setError(
+        err?.message?.data?.error || "Impossible d'enregistrer le commentaire",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-[#F4F7FA]">
       <StatusBar
@@ -283,56 +306,92 @@ export default function InterventionDetailScreen() {
             </View>
           )}
 
+          {currentStatus === "EN_COURS" && (
+            <View className="mt-4 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+              <Text className="text-[#111827] font-semibold mb-2">
+                Commentaire agent
+              </Text>
+              <TextInput
+                value={comment}
+                onChangeText={setComment}
+                placeholder="Décris ce qui a été fait..."
+                multiline
+                className="rounded-xl border border-[#E2E8F0] bg-white px-3 py-3 min-h-[90px]"
+              />
+              <TouchableOpacity
+                onPress={handleSaveComment}
+                disabled={saving}
+                className={`mt-3 rounded-xl py-3 items-center ${saving ? "bg-slate-300" : "bg-[#1F2937]"}`}
+              >
+                <Text className="text-white font-semibold">
+                  Enregistrer commentaire
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           {userRole === "admin" &&
             (currentStatus === "TERMINE" || currentStatus === "CLOS") && (
-              <View className="mt-4 rounded-2xl bg-white p-5 border border-[#E2E8F0]">
-                <Text className="text-lg font-semibold text-[#111827] mb-3">
-                  Photos intervention
-                </Text>
-
-                <Text className="text-sm font-semibold text-slate-700 mb-2">
-                  AVANT
-                </Text>
-                {photos.avant.length === 0 ? (
-                  <Text className="text-slate-500 mb-3">
-                    Aucune photo AVANT
+              <View>
+                <View className="mt-4 rounded-2xl bg-white p-5 border border-[#E2E8F0]">
+                  <Text className="text-lg font-semibold text-[#111827] mb-3">
+                    Photos intervention
                   </Text>
-                ) : (
-                  photos.avant.map((p) => (
-                    <Image
-                      key={`avant-${p.id}`}
-                      source={{ uri: buildPhotoUrl(p.file_path) }}
-                      style={{
-                        width: "100%",
-                        height: 180,
-                        borderRadius: 12,
-                        marginBottom: 8,
-                      }}
-                      resizeMode="cover"
-                    />
-                  ))
-                )}
 
-                <Text className="text-sm font-semibold text-slate-700 mt-2 mb-2">
-                  APRES
-                </Text>
-                {photos.apres.length === 0 ? (
-                  <Text className="text-slate-500">Aucune photo APRES</Text>
-                ) : (
-                  photos.apres.map((p) => (
-                    <Image
-                      key={`apres-${p.id}`}
-                      source={{ uri: buildPhotoUrl(p.file_path) }}
-                      style={{
-                        width: "100%",
-                        height: 180,
-                        borderRadius: 12,
-                        marginBottom: 8,
-                      }}
-                      resizeMode="cover"
-                    />
-                  ))
-                )}
+                  <Text className="text-sm font-semibold text-slate-700 mb-2">
+                    AVANT
+                  </Text>
+                  {photos.avant.length === 0 ? (
+                    <Text className="text-slate-500 mb-3">
+                      Aucune photo AVANT
+                    </Text>
+                  ) : (
+                    photos.avant.map((p) => (
+                      <Image
+                        key={`avant-${p.id}`}
+                        source={{ uri: buildPhotoUrl(p.file_path) }}
+                        style={{
+                          width: "100%",
+                          height: 180,
+                          borderRadius: 12,
+                          marginBottom: 8,
+                        }}
+                        resizeMode="cover"
+                      />
+                    ))
+                  )}
+
+                  <Text className="text-sm font-semibold text-slate-700 mt-2 mb-2">
+                    APRES
+                  </Text>
+                  {photos.apres.length === 0 ? (
+                    <Text className="text-slate-500">Aucune photo APRES</Text>
+                  ) : (
+                    photos.apres.map((p) => (
+                      <Image
+                        key={`apres-${p.id}`}
+                        source={{ uri: buildPhotoUrl(p.file_path) }}
+                        style={{
+                          width: "100%",
+                          height: 180,
+                          borderRadius: 12,
+                          marginBottom: 8,
+                        }}
+                        resizeMode="cover"
+                      />
+                    ))
+                  )}
+                </View>
+                <View className="mt-4 rounded-2xl bg-white p-5 border border-[#E2E8F0]">
+                  <Text className="text-lg font-semibold text-[#111827] mb-3">
+                    Commentaire
+                  </Text>
+                  <Text className="text-slate-600">
+                    {intervention.comment?.trim()
+                      ? intervention.comment
+                      : "Aucun commentaire"}
+                  </Text>
+                </View>
               </View>
             )}
 

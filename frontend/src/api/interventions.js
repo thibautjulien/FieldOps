@@ -68,3 +68,8 @@ export async function apiGetRecentInterventionLogs() {
   const res = await api.get("/interventions/logs/recent");
   return res.data;
 }
+
+export async function apiUpdateInterventionComment(id, comment) {
+  const res = await api.put(`/interventions/${id}`, { comment });
+  return res.data;
+}

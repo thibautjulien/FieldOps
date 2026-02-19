@@ -4,9 +4,9 @@ import { getToken } from "../utils/authStorage";
 
 const LAN_URL = "http://192.168.1.51:3000";
 
-const BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL ||
-  (Platform.OS === "android" ? "http://10.0.2.2:3000" : LAN_URL);
+const BASE_URL = "http://10.0.2.2:3000";
+/* process.env.EXPO_PUBLIC_API_URL ||
+  (Platform.OS === "android" ? "http://10.0.2.2:3000" : LAN_URL); */
 
 export const api = axios.create({
   baseURL: BASE_URL,
@@ -20,5 +20,7 @@ api.interceptors.request.use(async (config) => {
   }
   return config;
 });
+
+console.log("[FieldOps] API_BASE_URL=", BASE_URL);
 
 export const API_BASE_URL = BASE_URL;
